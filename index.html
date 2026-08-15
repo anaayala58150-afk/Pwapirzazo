@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="theme-color" content="#101a33">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Piezario — Cuenta, arma y escala tus figuras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-deep:#101a33;
+    --navy-panel:#1c2a4d;
+    --navy-panel-2:#233460;
+    --blueprint-line:#3f5a92;
+    --paper:#eee6d3;
+    --gold:#f4b942;
+    --gold-dim:#c99530;
+    --red:#d6453d;
+    --ink:#e9e4d6;
+    --ink-dim:#a9b3cf;
+    --stud:#0b1428;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      linear-gradient(var(--navy-deep),var(--navy-deep)),
+      repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(63,90,146,0.18) 27px, rgba(63,90,146,0.18) 28px),
+      repeating-linear-gradient(90deg, transparent, transparent 27px, rgba(63,90,146,0.18) 27px, rgba(63,90,146,0.18) 28px);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif;
+    min-height:100vh;
+    padding-bottom:40px;
+  }
+  header{
+    padding:22px 16px 14px;
+    text-align:center;
+    border-bottom:2px dashed var(--blueprint-line);
+    margin-bottom:14px;
+  }
+  header h1{
+    font-family:'Bungee',cursive;
+    font-size:clamp(28px,7vw,42px);
+    margin:0 0 6px;
+    color:var(--gold);
+    letter-spacing:1px;
+    text-shadow:3px 3px 0 rgba(0,0,0,0.35);
+  }
+  header p{
+    margin:0;
+    color:var(--ink-dim);
+    font-size:13px;
+    font-family:'IBM Plex Mono',monospace;
+    letter-spacing:0.5px;
+  }
+  .tabs{
+    display:flex;
+    gap:6px;
+    padding:0 12px;
+    margin-bottom:16px;
+    overflow-x:auto;
+  }
+  .tab{
+    flex:1 0 auto;
+    text-align:center;
+    padding:10px 12px;
+    background:var(--navy-panel);
+    border:2px solid var(--blueprint-line);
+    border-bottom:none;
+    border-radius:8px 8px 0 0;
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:0.5px;
+    color:var(--ink-dim);
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .tab.active{
+    background:var(--navy-panel-2);
+    color:var(--gold);
+    border-color:var(--gold-dim);
+  }
+  main{padding:0 12px;max-width:720px;margin:0 auto;}
+  section.panel{
+    display:none;
+    background:var(--navy-panel-2);
+    border:2px solid var(--blueprint-line);
+    border-radius:0 10px 10px 10px;
+    padding:16px;
+  }
+  section.panel.active{display:block;}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+  label{font-size:12px;color:var(--ink-dim);font-family:'IBM Plex Mono',monospace;}
+  input[type=number], input[type=text]{
+    background:var(--navy-deep);
+    border:1px solid var(--blueprint-line);
+    color:var(--ink);
+    border-radius:6px;
+    padding:7px 9px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    width:70px;
+  }
+  input[type=text].wide{width:100%;}
+  button{
+    background:var(--gold);
+    color:var(--navy-deep);
+    border:none;
+    border-radius:6px;
+    padding:8px 14px;
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:0.3px;
+    cursor:pointer;
+  }
+  button.secondary{
+    background:transparent;
+    color:var(--ink);
+    border:1px solid var(--blueprint-line);
+  }
+  button.danger{background:var(--red);color:#fff;}
+  button:active{transform:translateY(1px);}
+
+  /* palette */
+  .palette{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .swatch{
+    width:32px;height:32px;border-radius:6px;
+    border:2px solid rgba(255,255,255,0.15);
+    cursor:pointer;position:relative;
+  }
+  .swatch.selected{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold);}
+  .swatch.eraser{
+    background:repeating-linear-gradient(45deg,#2a3a63,#2a3a63 4px,#1c2a4d 4px,#1c2a4d 8px);
+  }
+
+  /* baseplate grid */
+  .plate-wrap{overflow:auto;border-radius:8px;background:#0c1730;padding:10px;border:1px solid var(--blueprint-line);}
+  .plate{
+    display:grid;
+    gap:2px;
+    width:max-content;
+    margin:0 auto;
+  }
+  .cell{
+    width:22px;height:22px;
+    background:var(--stud);
+    border-radius:3px;
+    position:relative;
+    cursor:pointer;
+  }
+  .cell::after{
+    content:"";
+    position:absolute;top:50%;left:50%;
+    width:8px;height:8px;
+    background:rgba(255,255,255,0.12);
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+  }
+  .cell.filled::after{background:rgba(0,0,0,0.25);}
+  .plate.x2 .cell{width:11px;height:11px;border-radius:2px;}
+  .plate.x2 .cell::after{width:4px;height:4px;}
+
+  table{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:13px;}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--blueprint-line);text-align:left;}
+  th{color:var(--gold);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;}
+  .chip{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px;border:1px solid rgba(255,255,255,0.2);}
+  .total-row td{color:var(--gold);font-weight:700;border-bottom:none;border-top:2px solid var(--gold-dim);}
+
+  .toggle{
+    display:flex;align-items:center;gap:8px;
+    background:var(--navy-deep);border:1px solid var(--blueprint-line);
+    border-radius:20px;padding:6px 12px;cursor:pointer;width:fit-content;
+  }
+  .toggle .dot{width:16px;height:16px;border-radius:50%;background:var(--blueprint-line);transition:0.15s;}
+  .toggle.on .dot{background:var(--gold);}
+  .toggle.on{border-color:var(--gold-dim);}
+
+  .size-btn.active{background:var(--gold);color:var(--navy-deep);border-color:var(--gold-dim);}
+  .note{font-size:12px;color:var(--ink-dim);line-height:1.5;margin-top:10px;}
+  .drop{
+    border:2px dashed var(--blueprint-line);border-radius:8px;
+    padding:24px 12px;text-align:center;color:var(--ink-dim);
+    font-size:13px;cursor:pointer;
+  }
+  .drop img{max-width:100%;border-radius:6px;margin-top:10px;}
+  .saved-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+  .saved-item{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--navy-deep);border:1px solid var(--blueprint-line);
+    border-radius:8px;padding:8px 12px;font-size:13px;
+  }
+  .badge{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;
+    background:var(--gold);color:var(--navy-deep);
+    padding:2px 6px;border-radius:4px;font-weight:700;
+  }
+  .loader{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PIEZARIO</h1>
+  <p>P107 · CUENTA · ARMA · ESCALA</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="editor">Editor</div>
+  <div class="tab" data-tab="vista">Vista final</div>
+  <div class="tab" data-tab="piezas">Piezas</div>
+  <div class="tab" data-tab="escala">Escalar x2</div>
+  <div class="tab" data-tab="foto">Analizar foto</div>
+  <div class="tab" data-tab="guardados">Mis diseños</div>
+</div>
+
+<main>
+
+  <!-- EDITOR -->
+  <section class="panel active" id="panel-editor">
+    <div class="row">
+      <label>Filas <input type="number" id="rows" min="4" max="40" value="16"></label>
+      <label>Columnas <input type="number" id="cols" min="4" max="40" value="16"></label>
+      <button class="secondary" id="resize-btn">Ajustar tamaño</button>
+      <button class="secondary" id="undo-btn">↩ Deshacer</button>
+      <button class="danger" id="clear-btn">Vaciar</button>
+    </div>
+    <div class="palette" id="palette"></div>
+    <div class="row" id="size-controls">
+      <label>Tamaño de pieza</label>
+      <button class="secondary size-btn" id="size-1">● 1 stud</button>
+      <button class="secondary size-btn" id="size-2">▬ 2 studs</button>
+      <button class="secondary size-btn" id="dir-h" style="display:none;">→ Horizontal</button>
+      <button class="secondary size-btn" id="dir-v" style="display:none;">↓ Vertical</button>
+    </div>
+    <div class="row">
+      <input type="text" id="new-color" value="#3f5a92" style="width:44px;padding:2px;height:34px;background:none;border:1px solid var(--blueprint-line);border-radius:6px;">
+      <button class="secondary" id="add-color-btn">+ Agregar color</button>
+    </div>
+    <div class="plate-wrap"><div class="plate" id="plate"></div></div>
+    <p class="note">Tocá para colocar una pieza del tamaño elegido. Si es de 2 studs, cada toque coloca la pieza completa en la dirección marcada. El conteo cuenta piezas reales, no solo celdas — mirá la pestaña "Piezas".</p>
+  </section>
+
+  <!-- VISTA FINAL -->
+  <section class="panel" id="panel-vista">
+    <div class="plate-wrap"><div class="plate" id="plate-preview"></div></div>
+    <p class="note">Así queda la figura terminada, sin controles de edición.</p>
+  </section>
+
+  <!-- PIEZAS -->
+  <section class="panel" id="panel-piezas">
+    <table id="parts-table">
+      <thead><tr><th>Color</th><th>Tam.</th><th>Del editor</th><th>Manuales</th><th>Total</th></tr></thead>
+      <tbody id="parts-body"></tbody>
+      <tfoot><tr class="total-row"><td>TOTAL</td><td></td><td id="tot-editor">0</td><td id="tot-manual">0</td><td id="tot-all">0</td></tr></tfoot>
+    </table>
+    <hr style="border-color:var(--blueprint-line);margin:16px 0;">
+    <p class="note" style="margin-top:0;">Agregar piezas manualmente (por ejemplo, de una lista que ya tenés):</p>
+    <div class="row">
+      <input type="text" id="man-color" value="#d6453d" style="width:44px;padding:2px;height:34px;background:none;border:1px solid var(--blueprint-line);border-radius:6px;">
+      <input type="text" id="man-name" class="wide" placeholder="Nombre del color" style="flex:1;min-width:120px;">
+      <select id="man-size" style="background:var(--navy-deep);border:1px solid var(--blueprint-line);color:var(--ink);border-radius:6px;padding:7px;font-family:'IBM Plex Mono',monospace;">
+        <option value="1">1 stud</option>
+        <option value="2">2 studs</option>
+      </select>
+      <input type="number" id="man-qty" min="1" value="1" style="width:64px;">
+      <button id="man-add-btn">Agregar</button>
+    </div>
+  </section>
+
+  <!-- ESCALAR -->
+  <section class="panel" id="panel-escala">
+    <div class="row">
+      <label>Factor de escala <input type="number" id="scale-factor" min="1" max="10" step="1" value="2"></label>
+      <button class="secondary" id="scale-2x">2×</button>
+      <button class="secondary" id="scale-3x">3×</button>
+    </div>
+    <p class="note" id="scale-formula-note"></p>
+    <p class="note">Al agrandar una escultura en las 3 dimensiones (largo, ancho y alto), el volumen crece al cubo del factor: 2× = 2×2×2 = <strong>8 veces</strong> las piezas; 3× = 3×3×3 = <strong>27 veces</strong>. La vista de abajo solo muestra el crecimiento del ancho/largo (la base); la altura también crece igual, así que la cantidad real de piezas usa el cubo completo, no lo que se ve en 2D.</p>
+    <div class="plate-wrap"><div class="plate" id="plate-scale"></div></div>
+    <table style="margin-top:14px;">
+      <thead><tr><th>Color</th><th>x1</th><th id="scale-col-header">x2 (real, 8×)</th></tr></thead>
+      <tbody id="scale-body"></tbody>
+      <tfoot><tr class="total-row"><td>TOTAL</td><td id="scale-tot-1">0</td><td id="scale-tot-n">0</td></tr></tfoot>
+    </table>
+  </section>
+
+  <!-- FOTO -->
+  <section class="panel" id="panel-foto">
+    <label class="drop" id="drop-zone" for="file-input">
+      Tocá para subir una foto o PDF de instrucciones<br>(se analiza con IA para estimar colores y cantidades)
+    </label>
+    <input type="file" id="file-input" accept="image/*,application/pdf" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;">
+    <div id="foto-result"></div>
+    <p class="note">Es una estimación visual, no un conteo exacto — siempre revisá y ajustá los resultados antes de agregarlos a tu lista de piezas.</p>
+  </section>
+
+  <!-- GUARDADOS -->
+  <section class="panel" id="panel-guardados">
+    <div class="row">
+      <input type="text" id="save-name" class="wide" placeholder="Nombre del diseño" style="flex:1;">
+      <button id="save-btn">Guardar diseño actual</button>
+    </div>
+    <div class="saved-list" id="saved-list"></div>
+  </section>
+
+</main>
+
+<script>
+const DEFAULT_PALETTE = [
+  {hex:'#d6453d', name:'Rojo'},
+  {hex:'#f4b942', name:'Amarillo'},
+  {hex:'#111111', name:'Negro'},
+  {hex:'#e9e4d6', name:'Blanco'},
+  {hex:'#7a7f89', name:'Gris'},
+  {hex:'#3f5a92', name:'Azul'},
+];
+
+let state = {
+  rows: 16, cols: 16,
+  grid: [],
+  pieces: {},       // id -> {color, size, dir, cells:[idx,...]}
+  cellPiece: [],     // idx -> pieceId or null
+  nextId: 1,
+  palette: DEFAULT_PALETTE.slice(),
+  selected: DEFAULT_PALETTE[0].hex,
+  selectedSize: 1,
+  selectedDir: 'h',
+  manualParts: [], // {color,name,qty,size}
+  scaleOn: false,
+};
+state.grid = new Array(state.rows*state.cols).fill(null);
+state.cellPiece = new Array(state.rows*state.cols).fill(null);
+let undoStack = [];
+function snapshot(){
+  undoStack.push(JSON.stringify({grid:state.grid, pieces:state.pieces, cellPiece:state.cellPiece, nextId:state.nextId}));
+  if(undoStack.length>50) undoStack.shift();
+}
+function undo(){
+  if(!undoStack.length) return;
+  const prev = JSON.parse(undoStack.pop());
+  state.grid = prev.grid; state.pieces = prev.pieces; state.cellPiece = prev.cellPiece; state.nextId = prev.nextId;
+  renderPlate('plate', state.grid, state.rows, state.cols, true, false);
+}
+document.getElementById('undo-btn').addEventListener('click', undo);
+
+// ---------- tabs ----------
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('section.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+    if(t.dataset.tab==='vista') renderPlate('plate-preview', state.grid, state.rows, state.cols, false, false);
+    if(t.dataset.tab==='piezas') renderParts();
+    if(t.dataset.tab==='escala') renderScale();
+    if(t.dataset.tab==='guardados') renderSavedList();
+  });
+});
+
+// ---------- palette ----------
+function renderPalette(){
+  const el = document.getElementById('palette');
+  el.innerHTML = '';
+  state.palette.forEach(c=>{
+    const sw = document.createElement('div');
+    sw.className = 'swatch'+(state.selected===c.hex?' selected':'');
+    sw.style.background = c.hex;
+    sw.title = c.name;
+    sw.addEventListener('click', ()=>{ state.selected = c.hex; renderPalette(); });
+    el.appendChild(sw);
+  });
+  const er = document.createElement('div');
+  er.className = 'swatch eraser'+(state.selected===null?' selected':'');
+  er.title = 'Borrar';
+  er.addEventListener('click', ()=>{ state.selected = null; renderPalette(); });
+  el.appendChild(er);
+}
+document.getElementById('add-color-btn').addEventListener('click', ()=>{
+  const hex = document.getElementById('new-color').value;
+  if(!state.palette.find(c=>c.hex===hex)){
+    state.palette.push({hex, name: hex});
+    renderPalette();
+  }
+});
+
+// ---------- size/direction controls ----------
+function updateSizeUI(){
+  document.getElementById('size-1').classList.toggle('active', state.selectedSize===1);
+  document.getElementById('size-2').classList.toggle('active', state.selectedSize===2);
+  document.getElementById('dir-h').style.display = state.selectedSize===2 ? '' : 'none';
+  document.getElementById('dir-v').style.display = state.selectedSize===2 ? '' : 'none';
+  document.getElementById('dir-h').classList.toggle('active', state.selectedDir==='h');
+  document.getElementById('dir-v').classList.toggle('active', state.selectedDir==='v');
+}
+document.getElementById('size-1').addEventListener('click', ()=>{ state.selectedSize=1; updateSizeUI(); });
+document.getElementById('size-2').addEventListener('click', ()=>{ state.selectedSize=2; updateSizeUI(); });
+document.getElementById('dir-h').addEventListener('click', ()=>{ state.selectedDir='h'; updateSizeUI(); });
+document.getElementById('dir-v').addEventListener('click', ()=>{ state.selectedDir='v'; updateSizeUI(); });
+updateSizeUI();
+
+// ---------- grid editor ----------
+let painting = false;
+function idx(r,c){ return r*state.cols+c; }
+function inBounds(r,c){ return r>=0 && r<state.rows && c>=0 && c<state.cols; }
+
+function buildPlate(){
+  state.grid = new Array(state.rows*state.cols).fill(null);
+  state.cellPiece = new Array(state.rows*state.cols).fill(null);
+  state.pieces = {};
+  renderPlate('plate', state.grid, state.rows, state.cols, true, false);
+}
+function renderPlate(elId, grid, rows, cols, interactive, isScale, factor){
+  factor = factor || 2;
+  const el = document.getElementById(elId);
+  el.className = 'plate'+(isScale?' x2':'');
+  const cellPx = isScale ? Math.max(4, Math.round(22/factor)) : 22;
+  el.style.gridTemplateColumns = `repeat(${isScale?cols*factor:cols}, ${cellPx}px)`;
+  el.innerHTML = '';
+  const rr = isScale ? rows*factor : rows;
+  const cc = isScale ? cols*factor : cols;
+  for(let r=0;r<rr;r++){
+    for(let c=0;c<cc;c++){
+      const srcR = isScale ? Math.floor(r/factor) : r;
+      const srcC = isScale ? Math.floor(c/factor) : c;
+      const color = grid[idx2(srcR,srcC,cols)];
+      const cell = document.createElement('div');
+      cell.className = 'cell'+(color?' filled':'');
+      if(isScale) cell.style.cssText += `width:${cellPx}px;height:${cellPx}px;`;
+      if(color) cell.style.background = color;
+      if(interactive){
+        cell.addEventListener('pointerdown', ()=>{ painting = (state.selectedSize===1); handleCellClick(srcR,srcC); });
+        cell.addEventListener('pointerenter', ()=>{ if(painting && state.selectedSize===1) handleCellClick(srcR,srcC); });
+      }
+      el.appendChild(cell);
+    }
+  }
+}
+function idx2(r,c,cols){ return r*cols+c; }
+document.addEventListener('pointerup', ()=>{ painting=false; });
+
+function removePieceAt(r,c){
+  if(!inBounds(r,c)) return;
+  const i = idx(r,c);
+  const pid = state.cellPiece[i];
+  if(pid!=null){
+    const p = state.pieces[pid];
+    p.cells.forEach(ci=>{ state.grid[ci]=null; state.cellPiece[ci]=null; });
+    delete state.pieces[pid];
+  }
+}
+function handleCellClick(r,c){
+  if(state.selected===null){ snapshot(); removePieceAt(r,c); renderPlate('plate', state.grid, state.rows, state.cols, true, false); return; }
+  if(state.selectedSize===1){
+    snapshot();
+    removePieceAt(r,c);
+    const i = idx(r,c);
+    const id = 'p'+(state.nextId++);
+    state.pieces[id] = {color: state.selected, size:1, cells:[i]};
+    state.cellPiece[i] = id;
+    state.grid[i] = state.selected;
+  } else {
+    let r2=r, c2=c;
+    if(state.selectedDir==='h') c2=c+1; else r2=r+1;
+    if(!inBounds(r2,c2)) return; // no cabe una pieza de 2 en el borde en esa dirección
+    snapshot();
+    removePieceAt(r,c); removePieceAt(r2,c2);
+    const i1=idx(r,c), i2=idx(r2,c2);
+    const id = 'p'+(state.nextId++);
+    state.pieces[id] = {color: state.selected, size:2, dir: state.selectedDir, cells:[i1,i2]};
+    state.cellPiece[i1]=id; state.cellPiece[i2]=id;
+    state.grid[i1]=state.selected; state.grid[i2]=state.selected;
+  }
+  renderPlate('plate', state.grid, state.rows, state.cols, true, false);
+}
+
+document.getElementById('resize-btn').addEventListener('click', ()=>{
+  state.rows = Math.max(4, Math.min(40, parseInt(document.getElementById('rows').value)||16));
+  state.cols = Math.max(4, Math.min(40, parseInt(document.getElementById('cols').value)||16));
+  buildPlate();
+});
+document.getElementById('clear-btn').addEventListener('click', ()=>{
+  snapshot();
+  state.grid = state.grid.map(()=>null);
+  state.cellPiece = state.cellPiece.map(()=>null);
+  state.pieces = {};
+  renderPlate('plate', state.grid, state.rows, state.cols, true, false);
+});
+
+// ---------- parts tally ----------
+function tallyGrid(){
+  const counts = {};
+  Object.values(state.pieces).forEach(p=>{
+    const key = p.size+'|'+p.color;
+    if(!counts[key]) counts[key] = {size:p.size, color:p.color, count:0};
+    counts[key].count++;
+  });
+  return counts;
+}
+function tallyManual(){
+  const counts = {};
+  state.manualParts.forEach(p=>{
+    const key = (p.size||1)+'|'+p.color;
+    if(!counts[key]) counts[key] = {size:p.size||1, color:p.color, count:0};
+    counts[key].count += p.qty;
+  });
+  return counts;
+}
+function colorName(hex){
+  const found = state.palette.find(c=>c.hex.toLowerCase()===hex.toLowerCase());
+  if(found) return found.name;
+  const m = state.manualParts.find(p=>p.color.toLowerCase()===hex.toLowerCase());
+  if(m) return m.name;
+  return hex;
+}
+function renderParts(){
+  const g = tallyGrid();
+  const m = tallyManual();
+  const allKeys = Array.from(new Set([...Object.keys(g), ...Object.keys(m)]));
+  const body = document.getElementById('parts-body');
+  body.innerHTML = '';
+  let totG=0, totM=0;
+  allKeys.forEach(key=>{
+    const [size, hex] = key.split('|');
+    const gv = (g[key]&&g[key].count)||0, mv = (m[key]&&m[key].count)||0;
+    totG+=gv; totM+=mv;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><span class="chip" style="background:${hex}"></span>${colorName(hex)}</td><td>${size}×1</td><td>${gv}</td><td>${mv}</td><td>${gv+mv}</td>`;
+    body.appendChild(tr);
+  });
+  document.getElementById('tot-editor').textContent = totG;
+  document.getElementById('tot-manual').textContent = totM;
+  document.getElementById('tot-all').textContent = totG+totM;
+}
+document.getElementById('man-add-btn').addEventListener('click', ()=>{
+  const color = document.getElementById('man-color').value;
+  const name = document.getElementById('man-name').value || color;
+  const size = parseInt(document.getElementById('man-size').value)||1;
+  const qty = Math.max(1, parseInt(document.getElementById('man-qty').value)||1);
+  state.manualParts.push({color, name, qty, size});
+  document.getElementById('man-name').value='';
+  renderParts();
+});
+
+// ---------- scale ----------
+document.getElementById('scale-factor').addEventListener('input', renderScale);
+document.getElementById('scale-2x').addEventListener('click', ()=>{ document.getElementById('scale-factor').value = 2; renderScale(); });
+document.getElementById('scale-3x').addEventListener('click', ()=>{ document.getElementById('scale-factor').value = 3; renderScale(); });
+
+function renderScale(){
+  const factor = Math.max(1, parseFloat(document.getElementById('scale-factor').value) || 1);
+  const multiplier = Math.round(Math.pow(factor,3)*100)/100; // factor^3, volumen 3D
+  document.getElementById('scale-formula-note').innerHTML = `Fórmula: ${factor} × ${factor} × ${factor} = <strong>${multiplier}×</strong> la cantidad de piezas de cada color.`;
+  document.getElementById('scale-col-header').textContent = `x${factor} (real, ${multiplier}×)`;
+
+  const visualFactor = Math.max(1, Math.round(factor));
+  renderPlate('plate-scale', state.grid, state.rows, state.cols, false, visualFactor>1, visualFactor);
+
+  const g = tallyGrid();
+  const body = document.getElementById('scale-body');
+  body.innerHTML = '';
+  let tot1=0, totN=0;
+  Object.keys(g).forEach(key=>{
+    const [size, hex] = key.split('|');
+    const base = g[key].count;
+    const scaled = Math.round(base*multiplier);
+    tot1+=base; totN+=scaled;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><span class="chip" style="background:${hex}"></span>${colorName(hex)} (${size}×1)</td><td>${base}</td><td>${scaled}</td>`;
+    body.appendChild(tr);
+  });
+  document.getElementById('scale-tot-1').textContent = tot1;
+  document.getElementById('scale-tot-n').textContent = totN;
+}
+
+// ---------- foto (AI vision) ----------
+document.getElementById('file-input').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const resultEl = document.getElementById('foto-result');
+  resultEl.innerHTML = `<div class="loader">Analizando imagen…</div>`;
+  try{
+    const base64 = await new Promise((res,rej)=>{
+      const r = new FileReader();
+      r.onload = ()=>res(r.result.split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    const mediaType = file.type || 'image/jpeg';
+    const isPdf = mediaType === 'application/pdf';
+    const contentBlock = isPdf
+      ? {type:"document", source:{type:"base64", media_type: "application/pdf", data: base64}}
+      : {type:"image", source:{type:"base64", media_type: mediaType, data: base64}};
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        messages: [{
+          role: "user",
+          content: [
+            contentBlock,
+            {type:"text", text:"Este archivo muestra instrucciones o una foto de una figura armada con piezas tipo LEGO/pixel-art de 1 o 2 studs. Identificá los colores de piezas visibles, su tamaño (1 o 2 studs) y estimá cuántas piezas hay de cada combinación color+tamaño en total. Respondé ÚNICAMENTE con JSON válido, sin texto adicional, con este formato exacto: [{\"name\":\"Rojo\",\"hex\":\"#d6453d\",\"size\":1,\"count\":24}, ...]. El campo size debe ser 1 o 2. Usá colores hex aproximados y sé conservador con las estimaciones."}
+          ]
+        }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content.map(b=>b.text||'').join('');
+    const clean = text.replace(/```json|```/g,'').trim();
+    const items = JSON.parse(clean);
+    const previewHtml = isPdf
+      ? `<p class="note">📄 ${file.name}</p>`
+      : `<img src="data:${mediaType};base64,${base64}">`;
+    resultEl.innerHTML = `${previewHtml}<p class="note">Resultado estimado — revisá antes de agregar:</p>`;
+    const table = document.createElement('table');
+    table.innerHTML = `<thead><tr><th>Color</th><th>Tam.</th><th>Cant. estimada</th><th></th></tr></thead>`;
+    const tbody = document.createElement('tbody');
+    items.forEach(it=>{
+      const sz = it.size===2?2:1;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><span class="chip" style="background:${it.hex}"></span>${it.name}</td><td>${sz}×1</td><td>${it.count}</td><td></td>`;
+      const btn = document.createElement('button');
+      btn.className='secondary'; btn.textContent='+ Agregar';
+      btn.addEventListener('click', ()=>{
+        state.manualParts.push({color: it.hex, name: it.name, qty: it.count, size: sz});
+        btn.textContent='Agregado ✓'; btn.disabled=true;
+      });
+      tr.lastElementChild.appendChild(btn);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    resultEl.appendChild(table);
+  }catch(err){
+    resultEl.innerHTML = `<p class="note">No se pudo analizar la imagen. Podés cargar las piezas manualmente en la pestaña "Piezas".</p>`;
+    console.error(err);
+  }
+});
+
+// ---------- persistence ----------
+async function renderSavedList(){
+  const listEl = document.getElementById('saved-list');
+  listEl.innerHTML = '<div class="loader">Cargando…</div>';
+  try{
+    const res = await window.storage.list('design:');
+    if(!res || !res.keys.length){ listEl.innerHTML = '<p class="note">Todavía no guardaste ningún diseño.</p>'; return; }
+    listEl.innerHTML = '';
+    for(const key of res.keys){
+      const item = document.createElement('div');
+      item.className = 'saved-item';
+      const label = key.replace('design:','');
+      item.innerHTML = `<span>${label}</span>`;
+      const btns = document.createElement('div');
+      btns.style.display='flex'; btns.style.gap='6px';
+      const loadBtn = document.createElement('button'); loadBtn.className='secondary'; loadBtn.textContent='Cargar';
+      const delBtn = document.createElement('button'); delBtn.className='danger'; delBtn.textContent='Borrar';
+      loadBtn.addEventListener('click', async ()=>{
+        const r = await window.storage.get(key);
+        if(r){ const d = JSON.parse(r.value);
+          state.rows=d.rows; state.cols=d.cols; state.grid=d.grid; state.manualParts=d.manualParts||[]; state.palette=d.palette||DEFAULT_PALETTE.slice();
+          if(d.pieces){ state.pieces=d.pieces; state.cellPiece=d.cellPiece; state.nextId=d.nextId||1; }
+          else{
+            // diseño guardado antes de tener piezas: reconstruir como piezas de 1 stud
+            state.pieces={}; state.cellPiece=new Array(state.rows*state.cols).fill(null); state.nextId=1;
+            state.grid.forEach((color,i)=>{ if(color){ const id='p'+(state.nextId++); state.pieces[id]={color,size:1,cells:[i]}; state.cellPiece[i]=id; } });
+          }
+          document.getElementById('rows').value=state.rows; document.getElementById('cols').value=state.cols;
+          renderPalette(); renderPlate('plate', state.grid, state.rows, state.cols, true, false);
+          document.querySelector('.tab[data-tab="editor"]').click();
+        }
+      });
+      delBtn.addEventListener('click', async ()=>{
+        await window.storage.delete(key);
+        renderSavedList();
+      });
+      btns.appendChild(loadBtn); btns.appendChild(delBtn);
+      item.appendChild(btns);
+      listEl.appendChild(item);
+    }
+  }catch(err){ listEl.innerHTML = '<p class="note">No se pudo cargar la lista de diseños guardados.</p>'; }
+}
+document.getElementById('save-btn').addEventListener('click', async ()=>{
+  const name = document.getElementById('save-name').value.trim();
+  if(!name){ alert('Poné un nombre para el diseño'); return; }
+  const payload = JSON.stringify({rows:state.rows, cols:state.cols, grid:state.grid, pieces:state.pieces, cellPiece:state.cellPiece, nextId:state.nextId, manualParts:state.manualParts, palette:state.palette});
+  try{
+    await window.storage.set('design:'+name, payload);
+    document.getElementById('save-name').value='';
+    renderSavedList();
+  }catch(err){ alert('No se pudo guardar el diseño.'); }
+});
+
+// ---------- init ----------
+renderPalette();
+buildPlate();
+
+// ---------- PWA: registrar service worker ----------
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.log('SW no registrado:', err));
+  });
+}
+</script>
+</body>
+</html>
